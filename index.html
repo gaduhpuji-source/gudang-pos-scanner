@@ -110,12 +110,27 @@
             qrbox: { width: 280, height: 140 },
             aspectRatio: 1.7
           },
-          async function (code) {
-            if (code === lastCode) return;
-            lastCode = code;
-            result.textContent = 'Barcode terbaca: ' + code;
-            await stopScanner();
-          },
+         
+async function (code) {
+  if (code === lastCode) return;
+  lastCode = code;
+
+  result.textContent = 'Barcode terbaca: ' + code;
+
+  // Kirim barcode ke halaman POS jika scanner dibuka dari POS.
+  if (window.opener && !window.opener.closed) {
+    window.opener.postMessage(
+      {
+        type: 'POS_BARCODE_SCANNED',
+        barcode: code
+      },
+      'https://script.google.com'
+    );
+  }
+
+  await stopScanner();
+},
+
           function () {}
         );
 
