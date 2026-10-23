@@ -120,12 +120,12 @@ async function (code) {
   // Kirim barcode ke halaman POS jika scanner dibuka dari POS.
   if (window.opener && !window.opener.closed) {
     window.opener.postMessage(
-      {
-        type: 'POS_BARCODE_SCANNED',
-        barcode: code
-      },
-      'https://script.google.com'
-    );
+  {
+    type: 'POS_BARCODE_SCANNED',
+    barcode: code
+  },
+  '*'
+);
   }
 
   await stopScanner();
