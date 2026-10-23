@@ -117,17 +117,49 @@ async function (code) {
 
   result.textContent = 'Barcode terbaca: ' + code;
 
-  // Kirim barcode ke halaman POS jika scanner dibuka dari POS.
-  if (window.opener && !window.opener.closed) {
-    window.opener.postMessage(
-  {
-    type: 'POS_BARCODE_SCANNED',
-    barcode: code
-  },
-  '*'
-);
+
+  // Kirim barcode ke Apps Script menggunakan sesi scanner.
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('sessionId');
+
+  if (!sessionId) {
+    result.textContent =
+      'Barcode terbaca: ' + code +
+      '. Sesi POS tidak ditemukan. Tutup scanner dan buka kembali dari POS.';
+    return;
   }
 
+  result.textContent = 'Barcode terbaca: ' + code + '. Mengirim ke POS...';
+
+  try {
+    
+const relayUrl =
+  'https://script.google.com/macros/s/AKfycbwgAAbsTBqli8e6NgRRYchlEG8bxh7dk6h6RXlhvHI49hejVsLvrv-24x9tAYC0-w0OTw/exec';
+
+
+    await fetch(relayUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
+        sessionId: sessionId,
+        barcode: code
+      })
+    });
+
+    result.textContent =
+      'Barcode: ' + code +
+      '. Data sudah dikirim. Kembali ke halaman POS.';
+  } catch (error) {
+    result.textContent =
+      'Barcode terbaca, tetapi pengiriman gagal. ' +
+      (error.message || String(error));
+    return;
+  }
+
+  await stopScanner();
   await stopScanner();
 },
 
