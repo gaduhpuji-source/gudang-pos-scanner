@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6255d8">
+  <title>Scanner Barcode - GUDANG & POS</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f5f5fa;
+      color: #222;
+    }
+    main {
+      max-width: 480px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 18px #00000012;
+    }
+    h2 { margin-top: 0; color: #6255d8; }
+    p { line-height: 1.5; }
+    button {
+      width: 100%;
+      padding: 13px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 10px;
+      background: #6255d8;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button.secondary { background: #555; }
+    #reader { width: 100%; margin-top: 16px; }
+    #result {
+      padding: 12px;
+      margin-top: 14px;
+      background: #f0efff;
+      border-radius: 8px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h2>Scanner Barcode</h2>
+    <p>Arahkan kamera belakang HP ke barcode produk.</p>
+
+    <button id="startButton" onclick="startScanner()">
+      Buka Kamera
+    </button>
+
+    <div id="reader"></div>
+    <div id="result">Hasil barcode akan muncul di sini.</div>
+
+    <button class="secondary" onclick="stopScanner()">
+      Tutup Kamera
+    </button>
+  </main>
+
+  <script>
+    let scanner = null;
+    let running = false;
+    let lastCode = '';
+
+    async function startScanner() {
+      const result = document.getElementById('result');
+      const button = document.getElementById('startButton');
+
+      if (!window.isSecureContext) {
+        result.textContent =
+          'Halaman belum berada dalam konteks HTTPS yang aman.';
+        return;
+      }
+
+      if (typeof Html5Qrcode !== 'function') {
+        result.textContent = 'Pustaka scanner belum berhasil dimuat.';
+        return;
+      }
+
+      button.disabled = true;
+      result.textContent = 'Meminta akses kamera...';
+
+      try {
+        if (!scanner) {
+          scanner = new Html5Qrcode('reader');
+        }
+
+        const cameras = await Html5Qrcode.getCameras();
+
+        if (!cameras.length) {
+          throw new Error('Kamera tidak ditemukan.');
+        }
+
+        const camera =
+          cameras.find(c => /back|rear|environment/i.test(c.label)) ||
+          cameras[cameras.length - 1];
+
+        await scanner.start(
+          camera.id,
+          {
+            fps: 10,
+            qrbox: { width: 280, height: 140 },
+            aspectRatio: 1.7
+          },
+          async function (code) {
+            if (code === lastCode) return;
+            lastCode = code;
+            result.textContent = 'Barcode terbaca: ' + code;
+            await stopScanner();
+          },
+          function () {}
+        );
+
+        running = true;
+        result.textContent = 'Kamera aktif. Arahkan ke barcode.';
+
+      } catch (error) {
+        result.textContent =
+          'Kamera gagal dibuka: ' + (error.message || String(error));
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function stopScanner() {
+      if (scanner && running) {
+        try {
+          await scanner.stop();
+        } catch (error) {}
+
+        try {
+          scanner.clear();
+        } catch (error) {}
+      }
+
+      running = false;
+      scanner = null;
+      lastCode = '';
+      document.getElementById('reader').innerHTML = '';
+      document.getElementById('startButton').disabled = false;
+    }
+  </script>
+</body>
+</html>
